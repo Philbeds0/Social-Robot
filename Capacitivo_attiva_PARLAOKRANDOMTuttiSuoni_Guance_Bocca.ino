@@ -5,26 +5,26 @@
 //VCC --> 5V
 
 
-#include <CapacitiveSensor.h>
+#include <CapacitiveSensor.h> //Library to use capacitive sensors (in this particular case we use copper plates)
 #include "Arduino.h"
 #include "SoftwareSerial.h"
-#include "DFRobotDFPlayerMini.h"
-#include <FastLED.h>
+#include "DFRobotDFPlayerMini.h" //Library to use the MP3 sd card reader
+#include <FastLED.h> //To control multiple leds at once
 
-//Dichiaro porte seriali dfplayermini
+//Declare serial ports dfplayermini
 int serial1 = 10;// RX
 int serial2 = 11;// TX
 
-//Associo la porta seriale creata ai 2 pin
+
 SoftwareSerial mySoftwareSerial(serial1, serial2); // RX, TX
 DFRobotDFPlayerMini myDFPlayer;
 
-CapacitiveSensor sensoretesta = CapacitiveSensor(4, 2);
-CapacitiveSensor sensoreschiena = CapacitiveSensor(32, 37);
-CapacitiveSensor sensorepancia = CapacitiveSensor(51, 50);
+CapacitiveSensor head_sensor = CapacitiveSensor(4, 2);
+CapacitiveSensor back_sensor = CapacitiveSensor(32, 37);
+CapacitiveSensor belly_sensor = CapacitiveSensor(51, 50);
 
 
-//########################Inizio codice guance
+//########################Starting cheeks firmware
 
 
 #define NUM_STRIPS 2
@@ -36,19 +36,19 @@ CapacitiveSensor sensorepancia = CapacitiveSensor(51, 50);
 CRGB leds[NUM_STRIPS][NUM_LEDS];
 
 
-//########################Fine codice guance
+//########################Ending cheeks firmware
 
 
 int sensorMin = 1023;        // minimum sensor value
 int sensorMax = 0;           // maximum sensor value
 int sensorValue = 0;
-byte testarandom = 0;
-byte schienarandom = 0;
-byte panciarandom = 0;
-byte lasttestarandom = 0;
-byte lastschienarandom = 0;
-byte lastpanciarandom = 0;
-int playerState = 0; //Controlla se il dfplayer mini sta riproducendo una canzone
+byte head_random = 0;
+byte back_random = 0;
+byte belly_random = 0;
+byte lasthead_random = 0;
+byte lastback_random = 0;
+byte lastbelly_random = 0;
+int playerState = 0; //check if dfplayer mini is playing something
 
 
 void setup()
@@ -101,7 +101,7 @@ void setup()
       Serial.println(sensorValue);
     }
   }
-  //Setto guance normali
+  //Set cheeks to normal
   leds[0][0] = CRGB( 255, 105, 180);
   leds[0][1] = CRGB( 255, 105, 180);
   FastLED.show();
@@ -112,34 +112,34 @@ void setup()
 void loop()
 {
 
-  long valoretesta = sensoretesta.capacitiveSensor(100);
-  long valoreschiena = sensoreschiena.capacitiveSensor(100);
-  long valorepancia = sensorepancia.capacitiveSensor(100);
+  long head_value = head_sensor.capacitiveSensor(100);
+  long back_value = back_sensor.capacitiveSensor(100);
+  long belly_value = belly_sensor.capacitiveSensor(100);
 
-  //valoretesta = map(sensorValue, sensorMin, sensorMax, 50, 255);
+  //head_value = map(sensorValue, sensorMin, sensorMax, 50, 255);
 
 
   Serial.print("testa:");
-  Serial.print(valoretesta);
+  Serial.print(head_value);
   Serial.print("     schiena:");
-  Serial.print(valoreschiena);
+  Serial.print(back_value);
   Serial.print("    pancia:");
-  Serial.println(valorepancia);
+  Serial.println(belly_value);
   delay(10);
 
-  if (valoretesta > 90 && valoretesta < 120) {
+  if (head_value > 90 && head_value < 120) {
 
 
-    testaaudiorandom();
+    head_audio_random();
 
-    while (playerState != 512) {  //Finché la scheda sta riproducendo
+    while (playerState != 512) {  //while mp3 is playing
       parla();
-      playerState = myDFPlayer.readState(); //Controllo se sta riproducendo ancora
-      Serial.println("Sonoinlooptesta");
+      playerState = myDFPlayer.readState(); //check if it is still playing
+      Serial.println("im in a loop head");
     }
-    playerState = myDFPlayer.readState(); //Controllo se sta riproducendo ancora
-    bastaparla();
-    resetsensore();
+    playerState = myDFPlayer.readState(); //check if it is still playing
+    stop_talking();
+    sensor_reset();
     Serial.println(playerState);
 
 
@@ -147,34 +147,34 @@ void loop()
 
   }
 
-  if (valoreschiena > 90 && valoreschiena < 120) {
+  if (back_value > 90 && back_value < 120) {
 
 
-    schienaaudiorandom();
+    back_audio_random();
 
-    while (playerState != 512) {  //Finché la scheda sta riproducendo
+    while (playerState != 512) {  //while mp3 is playing
       parla();
-      playerState = myDFPlayer.readState(); //Controllo se sta riproducendo ancora
-      Serial.println("Sonoinloopschiena");
+      playerState = myDFPlayer.readState(); //check if it is still playing
+      Serial.println("im in a loop back");
     }
 
-    bastaparla();
-    guancenormali();
-    resetsensore();
+    stop_talking();
+    normal_cheeks();
+    sensor_reset();
     return playerState;
   }
 
-  if (valorepancia > 90 && valorepancia < 120) {
-    panciaaudiorandom();
+  if (belly_value > 90 && belly_value < 120) {
+    belly_audio_random();
 
-    while (playerState != 512) {  //Finché la scheda sta riproducendo
+    while (playerState != 512) {  //while mp3 is playing
       parla();
-      playerState = myDFPlayer.readState(); //Controllo se sta riproducendo ancora
-      Serial.println("Sonoinlooppancia");
+      playerState = myDFPlayer.readState(); //check if it is still playing
+      Serial.println("im in a loop belly");
     }
 
-    bastaparla();
-    resetsensore();
+    stop_talking();
+    sensor_reset();
     return playerState;
   }
 
@@ -184,7 +184,7 @@ void loop()
 
 }
 
-void guancenormali() {
+void normal_cheeks() {
   leds[0][0] = CRGB( 255, 105, 180);
   leds[0][1] = CRGB( 255, 105, 180);
   FastLED.show();
@@ -195,51 +195,51 @@ void parla() {
 
   FastLED.show();
 }
-void bastaparla() {
+void stop_talking() {
   leds[1][0] = CRGB::Black;
   FastLED.show();
 }
 
-void testaaudiorandom() {
+void head_audio_random() {
 
-  testarandom = random(1, 4);
+  head_random = random(1, 4);
 
-  Serial.println(testarandom);
-  while (testarandom == lasttestarandom) {
-    testarandom = random(1, 3);
+  Serial.println(head_random);
+  while (head_random == lasthead_random) {
+    head_random = random(1, 3);
 
-    Serial.println(testarandom);
+    Serial.println(head_random);
   }
 
-  myDFPlayer.play(testarandom);
-  lasttestarandom = testarandom;
+  myDFPlayer.play(head_random);
+  lasthead_random = head_random;
 
 
 }
-void schienaaudiorandom() {
+void back_audio_random() {
 
-  schienarandom = random(4, 6);
-  while (schienarandom == lastschienarandom) {
-    schienarandom = random(4, 6);
+  back_random = random(4, 6);
+  while (back_random == lastback_random) {
+    back_random = random(4, 6);
   }
-  myDFPlayer.play(schienarandom);
-  lastschienarandom = schienarandom;
+  myDFPlayer.play(back_random);
+  lastback_random = back_random;
 
 }
-void panciaaudiorandom() {
+void belly_audio_random() {
 
-  panciarandom = random(7, 9);
-  while (panciarandom == lastpanciarandom) {
-    panciarandom = random(7, 9);
+  belly_random = random(7, 9);
+  while (belly_random == lastbelly_random) {
+    belly_random = random(7, 9);
   }
-  myDFPlayer.play(panciarandom);
-  lastpanciarandom = panciarandom;
+  myDFPlayer.play(belly_random);
+  lastbelly_random = belly_random;
 
 }
-void resetsensore() {
-  delay(50); //per dare tempo alla mano di togliersi cosi l'autocalibrazione sarà più precisa
-  sensorepancia.reset_CS_AutoCal(); //Stops readings
-  sensoreschiena.reset_CS_AutoCal(); //Stops readings
-  sensoretesta.reset_CS_AutoCal(); //Stops readings
+void sensor_reset() {
+  delay(50); //just to give time to remove the hand, calibration is more precise if you do this
+  belly_sensor.reset_CS_AutoCal(); //Stops readings
+  back_sensor.reset_CS_AutoCal(); //Stops readings
+  head_sensor.reset_CS_AutoCal(); //Stops readings
 
 }
